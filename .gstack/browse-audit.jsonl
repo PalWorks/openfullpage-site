@@ -1,0 +1,3 @@
+{"ts":"2026-09-08T22:43:55.477Z","cmd":"viewport","args":"1280x400","origin":"about:blank","durationMs":3,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-08T22:43:55.862Z","cmd":"goto","args":"https://palworks.github.io/openfullpage-site/?v=2","origin":"https://palworks.github.io/openfullpage-site/?v=2","durationMs":358,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-08T22:43:59.947Z","cmd":"screenshot","args":"--viewport /tmp/site-nav.png","origin":"https://palworks.github.io/openfullpage-site/?v=2","durationMs":20,"status":"ok","hasCookies":false,"mode":"launched"}
