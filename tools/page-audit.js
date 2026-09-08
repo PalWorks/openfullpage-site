@@ -36,8 +36,19 @@
   }
 
   const cw = document.documentElement.clientWidth;
+  // Something wider than the window is only a bug when nothing above it scrolls.
+  // Wide tables and code blocks are meant to overflow their own scroll container.
+  const scrolls = (el) => {
+    for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+      const o = getComputedStyle(n).overflowX;
+      if (o === 'auto' || o === 'scroll' || o === 'hidden') return true;
+    }
+    return false;
+  };
   const overflow = [...document.querySelectorAll('body *')]
-    .filter(e => e.getBoundingClientRect().right > cw + 1 && getComputedStyle(e).position !== 'fixed')
+    .filter(e => e.getBoundingClientRect().right > cw + 1
+      && getComputedStyle(e).position !== 'fixed'
+      && !scrolls(e))
     .map(e => e.tagName + '.' + (e.id || e.className));
 
   const headings = [...document.querySelectorAll('h1,h2,h3,h4')].map(h => Number(h.tagName[1]));

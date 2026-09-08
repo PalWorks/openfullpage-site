@@ -51,6 +51,9 @@
   --shell-dim: #8ba39f;
   /* The seal colour is unreadable on the dark panels, so they get their own. */
   --shell-ok: #5fd8c1;
+  /* Text drawn on the accent. It flips with the accent: white on the dark teal
+     of the light theme, near black on the light teal of the dark one. */
+  --on-accent: #ffffff;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -70,6 +73,7 @@
     --shell-rule: #1c2d2a;
     --shell-dim: #8ba39f;
     --shell-ok: #5fd8c1;
+    --on-accent: #06201c;
   }
 }
 
@@ -128,8 +132,8 @@ p { margin: 0; max-width: 68ch; }
   font: 600 15px/1 Archivo, sans-serif; letter-spacing: -0.01em;
   text-decoration: none; cursor: pointer; white-space: nowrap;
 }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-lift); color: #fff; }
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-lift); color: var(--on-accent); }
 .btn-quiet { border-color: var(--rule); color: var(--ink); background: var(--card); }
 .btn-quiet:hover { border-color: var(--ink-3); color: var(--ink); }
 .masthead .btn { padding: 8px 15px; font-size: 14px; }
