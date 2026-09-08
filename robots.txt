@@ -1,0 +1,8 @@
+# OpenFullPage
+# Everything here is public and meant to be indexed, by search engines and by
+# the crawlers that build language models alike.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://palworks.github.io/openfullpage-site/sitemap.xml

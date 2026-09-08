@@ -1,0 +1,55 @@
+# OpenFullPage
+
+> A Chrome extension that captures a whole web page as one image, annotates it and
+> saves it. It makes no network requests at all: the extension manifest sets
+> `connect-src 'none'`, so Chrome itself refuses to carry any outbound traffic.
+> Free, open source under GPL-3.0, no account, no analytics, no build step.
+
+## What it does
+
+- Captures a full web page of any length as a single image, not just the visible area.
+- Also captures the visible area only, or one selected element.
+- Holds sticky and fixed elements still while scrolling so they do not repeat down the image.
+- Waits for lazy loaded images before capturing each screenful.
+- Annotates with arrows, lines, boxes, ellipses, a highlighter, text and numbered steps.
+- Redacts by resampling the pixels and flattening on export, so the original is not recoverable from the saved file.
+- Crops, undoes and redoes.
+- Exports as PNG or JPEG, or copies to the clipboard.
+
+## What makes it different
+
+Every extension in this category claims to respect privacy. This one is built so the
+claim can be checked rather than believed:
+
+1. No network access. `connect-src 'none'` in the manifest blocks fetch, XMLHttpRequest, WebSocket and beacons at the browser level.
+2. No remote code. No eval, no new Function, no update server, no remotely fetched configuration.
+3. No dependencies and no build step. The installed package is byte identical to the public source, and the build proves it by diffing them.
+4. No broad permissions at install: only activeTab, scripting and storage. Downloads is requested on first save. Wider site access is optional, off by default and revocable.
+5. No synced storage, so settings never leave the machine that made them.
+
+Each of the five is checked on every commit and fails the build if broken.
+
+## Permissions in detail
+
+- `activeTab` (at install): read the current page, and only after the toolbar button is clicked on it.
+- `scripting` (at install): run the scrolling and measuring code, only where activeTab already allows it.
+- `storage` (at install): remember settings locally. Never `chrome.storage.sync`.
+- `downloads` (requested on first save): write the image to the downloads folder. Declining still allows a manual right click and save.
+- `webNavigation` plus site access (optional, off by default): capture the full contents of cross-origin iframes instead of only what is on screen.
+
+Even with all of these granted, the content security policy still blocks every
+outbound request. The permissions allow reading a page; none of them allows sending
+what was read anywhere.
+
+## Requirements
+
+Chrome 116 or newer on Windows, macOS, Linux or ChromeOS. Manifest V3. No account,
+no sign in, no configuration required.
+
+## Licence and source
+
+GPL-3.0. Source: https://github.com/PalWorks
+
+## Site
+
+- Home and full description: https://palworks.github.io/openfullpage-site/
