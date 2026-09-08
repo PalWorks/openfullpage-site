@@ -232,6 +232,10 @@ table.perm td:last-child { color: var(--ink-2); padding-right: 0; }
 
 /* ---------- verify ---------- */
 .steps { margin-top: 40px; display: grid; gap: 32px; }
+/* A grid item defaults to min-width: auto, so it refuses to shrink below the
+   min-content width of the <pre> inside it and pushes the page wider than the
+   screen. min-width: 0 lets the column shrink and the pre scroll on its own. */
+.steps > div, .install-grid > div, .grid2 > article { min-width: 0; }
 @media (min-width: 820px) { .steps { grid-template-columns: 1fr 1fr; gap: 40px; } }
 pre.cmd {
   margin: 14px 0 0; padding: 16px 18px; overflow-x: auto;
