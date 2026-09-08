@@ -111,8 +111,12 @@ p { margin: 0; max-width: 68ch; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; color: var(--ink); text-decoration: none; letter-spacing: -0.015em; }
 .brand img { width: 26px; height: 26px; display: block; border-radius: 6px; }
 .masthead nav { margin-left: auto; display: flex; align-items: center; gap: 22px; }
-.masthead nav a { color: var(--ink-2); text-decoration: none; font-size: 15px; }
-.masthead nav a:hover { color: var(--ink); }
+/* :not(.btn) matters. `.masthead nav a` scores (0,1,2) and `.btn-primary` scores
+   (0,1,0), so without it the nav colour wins and the Install button renders as
+   teal text on a teal fill. */
+.masthead nav a:not(.btn) { color: var(--ink-2); text-decoration: none; font-size: 15px; }
+.masthead nav a:not(.btn):hover { color: var(--ink); }
+.masthead nav a.btn { text-decoration: none; }
 @media (max-width: 700px) { .masthead nav a.hide-sm { display: none; } }
 
 .btn {
