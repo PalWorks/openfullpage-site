@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>How OpenFullPage is enforced: five rules, permissions, and how to check them</title>
+<meta name="description" content="A Chrome extension that captures a whole web page as one image, annotates it and saves it. No network access, no dependencies, no build step. The claim is enforced by Chrome and checked by CI, and you can verify it yourself in five minutes.">
+<link rel="canonical" href="https://palworks.github.io/openfullpage-site/enforced.html">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="color-scheme" content="light dark">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OpenFullPage">
+<meta property="og:url" content="https://palworks.github.io/openfullpage-site/enforced.html">
+<meta property="og:title" content="OpenFullPage: full page screenshots that make no network requests">
+<meta property="og:description" content="Capture a whole web page as one image, annotate it, save it. Zero network access, enforced by Chrome and checked by CI. Verify it yourself in five minutes.">
+<meta property="og:image" content="https://palworks.github.io/openfullpage-site/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenFullPage: full page screenshots that make no network requests.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenFullPage: full page screenshots that make no network requests">
+<meta name="twitter:description" content="Capture a whole web page as one image, annotate it, save it. Zero network access, enforced by Chrome and checked by CI.">
+<meta name="twitter:image" content="https://palworks.github.io/openfullpage-site/assets/og.png">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+:root {
+  /* One palette, two values per token. `light-dark()` resolves each pair from
+     the used `color-scheme`, so the three-state switch below is three lines
+     instead of a second copy of every colour. */
+  color-scheme: light dark;
+  --paper:       light-dark(#f3f6f5, #0c1412);
+  --card:        light-dark(#ffffff, #121d1b);
+  --ink:         light-dark(#111a19, #e8f0ee);
+  --ink-2:       light-dark(#4f605d, #93a8a4);
+  --ink-3:       light-dark(#5f716e, #7e938f);
+  --rule:        light-dark(#d9e2e0, #263835);
+  --rule-soft:   light-dark(#e7eeec, #1d2c2a);
+  /* The dark teals are held under chroma 80 (max channel minus min channel).
+     Above that, a hue in the 160-200 band on a near-black ground reads as the
+     neon cyan that generated dark themes are full of. */
+  --accent:      light-dark(#0c6f61, #59a897);
+  --accent-lift: light-dark(#0f8a78, #6fbdad);
+  --seal:        light-dark(#0c6f61, #59a897);
+  --seal-soft:   light-dark(#dcefec, #10302c);
+  --shell:       light-dark(#10201e, #08120f);
+  --shell-rule:  light-dark(#233937, #1c2d2a);
+  --shell-ink:   #d3e2df;
+  --shell-dim:   #8ba39f;
+  /* The seal colour is unreadable on the dark panels, so they get their own.
+     The panels are dark in both themes, so this does not flip. */
+  --shell-ok:    #6fbdad;
+  /* Text drawn on the accent. It flips with the accent: white on the dark teal
+     of the light theme, near black on the muted teal of the dark one. */
+  --on-accent:   light-dark(#ffffff, #06201c);
+}
+
+/* Theme switch. The absence of the attribute is the third state: it leaves
+   `color-scheme: light dark` in place, so the OS decides. Cycling back to
+   system therefore removes the attribute rather than storing a value. */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 17px/1.6 Archivo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.wrap { width: min(1080px, 100% - 48px); margin-inline: auto; }
+@media (max-width: 620px) { .wrap { width: min(1080px, 100% - 32px); } }
+
+code, kbd, .mono { font-family: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { color: var(--accent-lift); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+h1, h2, h3 { font-weight: 800; letter-spacing: -0.028em; line-height: 1.05; margin: 0; text-wrap: balance; }
+h2 { font-size: clamp(28px, 4vw, 40px); }
+h3 { font-size: 19px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.3; }
+p { margin: 0; max-width: 68ch; }
+
+/* ---------- masthead ---------- */
+.masthead {
+  position: sticky; top: 0; z-index: 40;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: saturate(1.6) blur(10px);
+  border-bottom: 1px solid var(--rule);
+}
+.masthead .wrap { display: flex; align-items: center; gap: 14px; height: 62px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; color: var(--ink); text-decoration: none; letter-spacing: -0.015em; }
+.brand img { width: 26px; height: 26px; display: block; border-radius: 6px; }
+.masthead nav { margin-left: auto; display: flex; align-items: center; gap: 22px; }
+/* :not(.btn) matters. `.masthead nav a` scores (0,1,2) and `.btn-primary` scores
+   (0,1,0), so without it the nav colour wins and the Install button renders as
+   teal text on a teal fill. */
+.masthead nav a:not(.btn) { color: var(--ink-2); text-decoration: none; font-size: 15px; }
+.masthead nav a:not(.btn):hover { color: var(--ink); }
+.masthead nav a.btn { text-decoration: none; }
+@media (max-width: 700px) { .masthead nav a.hide-sm { display: none; } }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 11px 20px; border-radius: 8px; border: 1px solid transparent;
+  font: 600 15px/1 Archivo, sans-serif; letter-spacing: -0.01em;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-lift); color: var(--on-accent); }
+.btn-quiet { border-color: var(--rule); color: var(--ink); background: var(--card); }
+.btn-quiet:hover { border-color: var(--ink-3); color: var(--ink); }
+.masthead .btn { padding: 8px 15px; font-size: 14px; }
+
+/* ---------- theme toggle ---------- */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 34px; height: 34px; padding: 0;
+  border-radius: 8px; border: 1px solid var(--rule);
+  background: var(--card); color: var(--ink-2); cursor: pointer;
+}
+.theme-toggle:hover { color: var(--ink); border-color: var(--ink-3); }
+.theme-toggle .ico { width: 17px; height: 17px; display: none; }
+:root:not([data-theme]) .theme-toggle .ico-system { display: block; }
+:root[data-theme="light"] .theme-toggle .ico-light { display: block; }
+:root[data-theme="dark"]  .theme-toggle .ico-dark  { display: block; }
+
+/* ---------- hero ---------- */
+.hero { padding: clamp(56px, 9vw, 104px) 0 clamp(40px, 6vw, 72px); }
+/* Wide enough that each sentence holds one line, small enough that the two
+   of them stay well inside the first viewport. */
+.hero h1 { font-size: clamp(34px, 5.2vw, 56px); max-width: 34ch; }
+.hero h1 .second { color: var(--ink-2); display: block; }
+.hero .stand { margin-top: 24px; font-size: clamp(17px, 2vw, 19px); color: var(--ink-2); max-width: 56ch; }
+.hero .actions { margin-top: 32px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.hero .actions .aside { color: var(--ink-3); font-size: 14px; }
+
+/* The proof panel: a network log with nothing in it. */
+.proof { margin-top: clamp(40px, 6vw, 64px); }
+.panel {
+  background: var(--shell); color: var(--shell-ink);
+  border: 1px solid var(--shell-rule); border-radius: 12px; overflow: hidden;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.16), 0 18px 44px -20px rgb(20 22 29 / 0.42);
+}
+.panel-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid var(--shell-rule);
+  font: 500 13px/1 "IBM Plex Mono", monospace; color: var(--shell-dim);
+}
+.panel-bar .lamp { width: 9px; height: 9px; border-radius: 50%; background: var(--shell-rule); flex: none; }
+.panel-bar .lamp.live { background: var(--shell-ok); }
+.panel-bar .right { margin-left: auto; }
+.log { width: 100%; border-collapse: collapse; font: 400 13.5px/1 "IBM Plex Mono", monospace; }
+.log th, .log td { text-align: left; padding: 10px 16px; }
+.log th { color: var(--shell-dim); font-weight: 500; border-bottom: 1px solid var(--shell-rule); }
+.log td.empty {
+  padding: 44px 16px; text-align: center; color: var(--shell-dim);
+  font-size: 14px; letter-spacing: 0.01em;
+}
+.panel-foot {
+  display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline;
+  padding: 12px 16px; border-top: 1px solid var(--shell-rule);
+  font: 400 13px/1.5 "IBM Plex Mono", monospace; color: var(--shell-dim);
+}
+.panel-foot b { color: var(--shell-ok); font-weight: 600; }
+.proof-note { margin-top: 14px; color: var(--ink-2); font-size: 15px; max-width: 72ch; }
+.proof-note code { color: var(--ink); font-size: 0.88em; }
+
+/* ---------- generic section ---------- */
+section { padding: clamp(56px, 8vw, 96px) 0; border-top: 1px solid var(--rule); }
+.lede { margin-top: 16px; color: var(--ink-2); font-size: 18px; }
+
+/* ---------- what it does ---------- */
+.shots { margin-top: 40px; display: grid; gap: 28px; }
+@media (min-width: 860px) { .shots { grid-template-columns: repeat(3, 1fr); gap: 24px; } }
+.shot figure { margin: 0; }
+.shot img {
+  display: block; width: 100%; height: auto; border-radius: 8px;
+  border: 1px solid var(--rule); background: var(--card);
+}
+.shot figcaption { margin-top: 12px; }
+.shot figcaption b { display: block; font-weight: 600; font-size: 16px; }
+.shot figcaption span { color: var(--ink-2); font-size: 15px; }
+
+/* ---------- the rules ---------- */
+.rules { margin-top: 44px; border-top: 1px solid var(--rule); }
+.rule {
+  display: grid; gap: 6px 24px; padding: 24px 0;
+  border-bottom: 1px solid var(--rule);
+  grid-template-columns: 44px 1fr;
+}
+@media (min-width: 880px) { .rule { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 300px); align-items: start; } }
+.rule .n {
+  font: 500 14px/1.5 "IBM Plex Mono", monospace; color: var(--ink-3);
+  font-variant-numeric: tabular-nums; padding-top: 3px;
+}
+.rule .body p { margin-top: 6px; color: var(--ink-2); font-size: 16px; }
+.rule .check {
+  grid-column: 2 / -1; margin-top: 4px;
+  font: 400 13px/1.5 "IBM Plex Mono", monospace; color: var(--ink-2);
+  display: flex; gap: 8px; align-items: flex-start;
+}
+@media (min-width: 880px) { .rule .check { grid-column: 3; margin-top: 3px; justify-self: start; } }
+.rule .check .tick { color: var(--seal); flex: none; font-weight: 600; }
+.rule .check span { word-break: break-word; }
+
+/* ---------- permissions ---------- */
+.table-scroll { margin-top: 36px; overflow-x: auto; }
+table.perm { width: 100%; border-collapse: collapse; font-size: 15.5px; min-width: 620px; }
+table.perm th, table.perm td { text-align: left; padding: 14px 16px 14px 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+table.perm thead th { border-bottom: 1px solid var(--rule); color: var(--ink-3); font-weight: 500; font-size: 14px; }
+table.perm td:first-child { white-space: nowrap; }
+table.perm td:first-child code { font-size: 14px; color: var(--ink); }
+table.perm td:last-child { color: var(--ink-2); padding-right: 0; }
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font: 500 12px/1.6 Archivo, sans-serif; white-space: nowrap;
+}
+.tag.now { background: var(--seal-soft); color: var(--seal); }
+.tag.later { background: var(--rule-soft); color: var(--ink-2); }
+
+/* ---------- verify ---------- */
+.steps { margin-top: 40px; display: grid; gap: 32px; }
+/* A grid item defaults to min-width: auto, so it refuses to shrink below the
+   min-content width of the <pre> inside it and pushes the page wider than the
+   screen. min-width: 0 lets the column shrink and the pre scroll on its own. */
+.steps > div, .install-grid > div, .grid2 > article { min-width: 0; }
+@media (min-width: 820px) { .steps { grid-template-columns: 1fr 1fr; gap: 40px; } }
+pre.cmd {
+  margin: 14px 0 0; padding: 16px 18px; overflow-x: auto;
+  background: var(--shell); color: var(--shell-ink);
+  border: 1px solid var(--shell-rule); border-radius: 10px;
+  font: 400 13.5px/1.75 "IBM Plex Mono", monospace;
+}
+pre.cmd .c { color: var(--shell-dim); }
+pre.cmd .ok { color: var(--shell-ok); }
+.steps h3 + p { margin-top: 8px; color: var(--ink-2); font-size: 16px; }
+
+/* ---------- faq ---------- */
+.faq { margin-top: 36px; border-top: 1px solid var(--rule); }
+.faq details { border-bottom: 1px solid var(--rule); }
+.faq summary {
+  cursor: pointer; padding: 20px 40px 20px 0; position: relative;
+  font-weight: 600; font-size: 17.5px; letter-spacing: -0.012em; list-style: none;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: ""; position: absolute; right: 8px; top: 50%; width: 9px; height: 9px;
+  margin-top: -6px; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3);
+  transform: rotate(45deg); transition: transform 160ms ease;
+}
+.faq details[open] summary::after { transform: rotate(-135deg); margin-top: -2px; }
+.faq .answer { padding: 0 0 22px; color: var(--ink-2); font-size: 16.5px; }
+.faq .answer p + p { margin-top: 12px; }
+
+/* ---------- install ---------- */
+.install-grid { margin-top: 36px; display: grid; gap: 30px; }
+@media (min-width: 820px) { .install-grid { grid-template-columns: 1.05fr 1fr; gap: 48px; } }
+ol.numbered { margin: 0; padding-left: 20px; color: var(--ink-2); font-size: 16px; }
+ol.numbered li { margin-bottom: 10px; }
+ol.numbered li:last-child { margin-bottom: 0; }
+ol.numbered code { color: var(--ink); font-size: 0.9em; }
+.pending {
+  margin-top: 22px; padding: 16px 18px; border-radius: 10px;
+  border: 1px solid var(--rule); background: var(--card); color: var(--ink-2); font-size: 15px;
+}
+.pending b { color: var(--ink); font-weight: 600; }
+
+/* ---------- footer ---------- */
+footer { border-top: 1px solid var(--rule); padding: 40px 0 56px; color: var(--ink-3); font-size: 14.5px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; }
+footer a { color: var(--ink-2); text-decoration: none; }
+footer a:hover { color: var(--ink); text-decoration: underline; }
+footer .spacer { margin-left: auto; }
+</style>
+
+<script>
+// Runs before first paint: a stored choice has to be on <html> before the body
+// renders, or the page flashes the system theme first. No stored value means
+// "follow the system", which is what the CSS already does unaided.
+(function () {
+  try {
+    var t = localStorage.getItem("theme");
+    if (t === "light" || t === "dark") {
+      document.documentElement.setAttribute("data-theme", t);
+    }
+  } catch (e) {}
+})();
+</script>
+</head>
+
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="assets/logo.svg" alt="" width="26" height="26"> OpenFullPage</a>
+    <nav>
+      <a class="hide-sm" href="./">&larr; Home</a>
+      <a class="hide-sm" href="#rules">How it is enforced</a>
+      <a class="hide-sm" href="#permissions">Permissions</a>
+      <a href="https://github.com/PalWorks" rel="noopener">Source</a>
+      <button class="theme-toggle" type="button" id="theme-toggle">
+        <svg class="ico ico-system" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.4"/><path d="M12 3.6a8.4 8.4 0 0 0 0 16.8z" fill="currentColor" stroke="none"/></svg>
+        <svg class="ico ico-light" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.3"/><path d="M12 2.4v2.3M12 19.3v2.3M2.4 12h2.3M19.3 12h2.3M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7"/></svg>
+        <svg class="ico ico-dark" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20.2 13.6A8.4 8.4 0 1 1 10.4 3.8a6.6 6.6 0 0 0 9.8 9.8z"/></svg>
+        <span class="sr-only" id="theme-toggle-label">Theme: system</span>
+      </button>
+      <a class="btn btn-primary" href="#install">Install it</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <div class="hero wrap">
+    <h1>Screenshot the whole page.<span class="second">Nothing leaves your computer.</span></h1>
+    <p class="stand">
+      OpenFullPage captures a web page of any length as one image, lets you mark it
+      up, and saves it. It has no network access at all, which is not a promise in a
+      privacy policy: it is a line in the manifest that Chrome enforces, and a test
+      that fails the build if anyone removes it.
+    </p>
+    <div class="actions">
+      <a class="btn btn-primary" href="#install">Install it</a>
+      <a class="btn btn-quiet" href="#verify">Verify the claim</a>
+      <span class="aside">Free and open source, GPL-3.0</span>
+    </div>
+
+    <div class="proof">
+      <div class="panel">
+        <div class="panel-bar">
+          <span class="lamp live" aria-hidden="true"></span>
+          <span>Network</span>
+          <span class="right">recording a full page capture</span>
+        </div>
+        <table class="log">
+          <thead>
+            <tr><th scope="col">Name</th><th scope="col">Status</th><th scope="col">Type</th><th scope="col">Size</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="empty" colspan="4">No requests. The extension has nowhere to send anything.</td></tr>
+          </tbody>
+        </table>
+        <div class="panel-foot">
+          <span><b>0</b> requests</span>
+          <span><b>0 B</b> transferred</span>
+          <span>content-security-policy: connect-src 'none'</span>
+        </div>
+      </div>
+      <p class="proof-note">
+        <code>connect-src 'none'</code> tells Chrome to refuse every outbound request the
+        extension could make: <code>fetch</code>, <code>XMLHttpRequest</code>, WebSocket,
+        and beacons. It is not our code choosing to behave. It is the browser refusing
+        to carry the traffic.
+      </p>
+    </div>
+  </div>
+
+  <section id="what">
+    <div class="wrap">
+      <h2>Capture, mark up, save</h2>
+      <p class="lede">Three steps, all of them on your machine.</p>
+      <div class="shots">
+        <div class="shot">
+          <figure>
+            <img src="assets/shot-capture.png" width="1280" height="800" loading="lazy" decoding="async"
+                 alt="A long web page captured as a single tall image inside the OpenFullPage editor.">
+            <figcaption>
+              <b>The whole page, in one image</b>
+              <span>It scrolls the page for you, holds sticky headers still, waits for lazy images and stitches the result into one picture.</span>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="shot">
+          <figure>
+            <img src="assets/shot-annotate.png" width="1280" height="800" loading="lazy" decoding="async"
+                 alt="The OpenFullPage editor with an arrow, a filled box and a numbered step drawn over a capture.">
+            <figcaption>
+              <b>Mark it up</b>
+              <span>Arrows, boxes, ellipses, highlighter, text, numbered steps and a redaction tool that destroys the pixels underneath rather than covering them.</span>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="shot">
+          <figure>
+            <img src="assets/shot-save.png" width="1280" height="800" loading="lazy" decoding="async"
+                 alt="Choosing a filename and a PNG or JPEG format before saving the capture.">
+            <figcaption>
+              <b>Save it or copy it</b>
+              <span>PNG or JPEG, with a filename you can edit before it lands in your downloads folder. Or copy straight to the clipboard.</span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="rules">
+    <div class="wrap">
+      <h2>Five rules, and the test that enforces each one</h2>
+      <p class="lede">
+        Every extension in this category says it respects your privacy. The difference
+        here is that you do not have to take anyone's word for it. Each rule below is
+        checked on every commit, and the build fails if it is broken.
+      </p>
+
+      <div class="rules">
+        <div class="rule">
+          <div class="n">1</div>
+          <div class="body">
+            <h3>No network access</h3>
+            <p>No requests of any kind. No analytics, no error reporting, no remote fonts, no remote images.</p>
+          </div>
+          <div class="check"><span class="tick" aria-hidden="true">✓</span><span>manifest.json declares connect-src 'none'</span></div>
+        </div>
+
+        <div class="rule">
+          <div class="n">2</div>
+          <div class="body">
+            <h3>No remote code</h3>
+            <p>No <code>eval</code>, no <code>new Function</code>, no update server of our own, no remotely fetched configuration or blocklists.</p>
+          </div>
+          <div class="check"><span class="tick" aria-hidden="true">✓</span><span>test/invariants.test.js scans every shipped file</span></div>
+        </div>
+
+        <div class="rule">
+          <div class="n">3</div>
+          <div class="body">
+            <h3>No dependencies and no build step</h3>
+            <p>The package you install is byte for byte the files in the repository. There is no bundler in between that could add something you did not read.</p>
+          </div>
+          <div class="check"><span class="tick" aria-hidden="true">✓</span><span>the packed zip is diffed against the source tree</span></div>
+        </div>
+
+        <div class="rule">
+          <div class="n">4</div>
+          <div class="body">
+            <h3>No broad permissions at install</h3>
+            <p>It cannot read a page until you click the button on that page. Everything wider than that is optional, off by default, and revocable.</p>
+          </div>
+          <div class="check"><span class="tick" aria-hidden="true">✓</span><span>the permission list is asserted, not just reviewed</span></div>
+        </div>
+
+        <div class="rule">
+          <div class="n">5</div>
+          <div class="body">
+            <h3>No synced storage</h3>
+            <p><code>chrome.storage.sync</code> would send your settings to Google's servers. Settings stay on the machine that made them.</p>
+          </div>
+          <div class="check"><span class="tick" aria-hidden="true">✓</span><span>the synced storage API is banned outright</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="permissions">
+    <div class="wrap">
+      <h2>Every permission, and what it cannot do</h2>
+      <p class="lede">
+        Three permissions are requested when you install. Two more are asked for later,
+        at the moment they are needed, and you can say no to both and still use the
+        extension.
+      </p>
+      <div class="table-scroll">
+        <table class="perm">
+          <thead>
+            <tr><th scope="col">Permission</th><th scope="col">When</th><th scope="col">What it is for</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>activeTab</code></td>
+              <td><span class="tag now">At install</span></td>
+              <td>Read the page you are on, and only after you click the toolbar button on it. It grants nothing until that click and expires when you leave.</td>
+            </tr>
+            <tr>
+              <td><code>scripting</code></td>
+              <td><span class="tag now">At install</span></td>
+              <td>Run the code that scrolls the page and measures it. It can only run where <code>activeTab</code> has already let us in.</td>
+            </tr>
+            <tr>
+              <td><code>storage</code></td>
+              <td><span class="tag now">At install</span></td>
+              <td>Remember your settings on this computer. Local storage only, never the synced kind.</td>
+            </tr>
+            <tr>
+              <td><code>downloads</code></td>
+              <td><span class="tag later">On first save</span></td>
+              <td>Put the finished image in your downloads folder. Refuse it and you can still right click the image and save it yourself.</td>
+            </tr>
+            <tr>
+              <td><code>webNavigation</code> and site access</td>
+              <td><span class="tag later">Optional, off</span></td>
+              <td>Capture the full contents of cross-origin iframes rather than only what is on screen. Off unless you turn it on in settings, and revocable at any time.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="proof-note">
+        Worth saying plainly: even with every one of these granted, the content security
+        policy still blocks all outbound traffic. The widest permission the extension can
+        hold lets it read a page. None of them lets it send what it read anywhere.
+      </p>
+    </div>
+  </section>
+
+  <section id="verify">
+    <div class="wrap">
+      <h2>Check it yourself in five minutes</h2>
+      <p class="lede">
+        This is the part that matters. You do not need to trust the list above, because
+        you can run the same checks the build runs.
+      </p>
+      <div class="steps">
+        <div>
+          <h3>Watch it capture with DevTools open</h3>
+          <p>
+            Open the Network tab, capture a long page, and look at the request list. It
+            stays empty. This takes about thirty seconds and needs no tools at all.
+          </p>
+        </div>
+        <div>
+          <h3>Read the manifest</h3>
+          <p>The whole security posture is a handful of lines you can read in a minute.</p>
+<pre class="cmd"><span class="c">// manifest.json</span>
+"permissions": ["activeTab", "scripting", "storage"],
+"content_security_policy": {
+  "extension_pages":
+    "script-src 'self'; object-src 'none'; <span class="ok">connect-src 'none'</span>"
+}</pre>
+        </div>
+        <div>
+          <h3>Run the checks the build runs</h3>
+          <p>No install step, because there is nothing to install.</p>
+<pre class="cmd">$ node --test 'test/**/*.test.js'
+<span class="ok">ℹ pass 86</span>
+<span class="c">ℹ fail 0</span></pre>
+        </div>
+        <div>
+          <h3>Diff the package against the source</h3>
+          <p>
+            Prove that what you install is what you read. The packaging tool rebuilds the
+            zip and compares it, file by file, with the repository.
+          </p>
+<pre class="cmd">$ ./tools/pack.sh
+<span class="c">dist/openfullpage-1.6.1.zip (36 files)</span>
+$ ./tools/verify-crx/verify-crx zip \
+    dist/openfullpage-1.6.1.zip .
+<span class="ok">identical</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install it</h2>
+      <div class="install-grid">
+        <div>
+          <p class="lede" style="margin-top:0">
+            The Chrome Web Store listing is being prepared. Until it is live you can run
+            the extension straight from the source, which is the same set of files the
+            store package will contain.
+          </p>
+          <ol class="numbered" style="margin-top:22px">
+            <li>Download or clone the repository.</li>
+            <li>Open <code>chrome://extensions</code>.</li>
+            <li>Turn on <b>Developer mode</b>, top right.</li>
+            <li>Click <b>Load unpacked</b> and choose the folder.</li>
+            <li>Pin OpenFullPage to the toolbar and click it on any page.</li>
+          </ol>
+          <p class="pending">
+            <b>Why not the store yet?</b> Because the listing has to describe exactly what
+            the code does, and the code is still being finished. A store page that
+            overstates the product would undo the only thing this project is for.
+          </p>
+        </div>
+        <div>
+          <h3>What you need</h3>
+          <p style="margin-top:8px;color:var(--ink-2);font-size:16px">
+            Chrome 116 or newer, on any desktop platform. Nothing else. There is no
+            account, no sign in, no configuration and no build step.
+          </p>
+          <h3 style="margin-top:28px">What it costs</h3>
+          <p style="margin-top:8px;color:var(--ink-2);font-size:16px">
+            Nothing, now or later. There is no paid tier to upsell you to, which is also
+            why there is no reason to collect anything about you.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>Questions</h2>
+      <div class="faq">
+        <details>
+          <summary>How do I know the extension will not change after I install it?</summary>
+          <div class="answer">
+            <p>
+              You do not, and neither does anyone else, which is the honest answer. Chrome
+              updates extensions silently, and it only re-prompts you when the permissions
+              increase. An extension that already has the permissions it needs can change
+              what it does with them without asking again.
+            </p>
+            <p>
+              What this project does about that is keep the permissions minimal enough that
+              a change of behaviour would need a visible permission prompt, publish every
+              release from a public repository, and make the shipped package byte identical
+              to the source so any release can be diffed against the code that claims to
+              produce it.
+            </p>
+          </div>
+        </details>
+        <details>
+          <summary>Does it work on very long pages?</summary>
+          <div class="answer">
+            <p>
+              Yes. It walks the page a screenful at a time and stitches the results, with
+              sticky headers held still so they do not repeat down the image. Chrome's
+              canvas has a hard ceiling of 16,384 pixels on a side, so pages longer than
+              that are scaled down to fit rather than cut off, and the editor tells you
+              when that has happened.
+            </p>
+          </div>
+        </details>
+        <details>
+          <summary>Can it capture pages behind a login?</summary>
+          <div class="answer">
+            <p>
+              Yes, in the ordinary way: you are logged in, so the page you can see is the
+              page it captures. Nothing about that page is transmitted anywhere, which is
+              precisely the case where that matters most.
+            </p>
+          </div>
+        </details>
+        <details>
+          <summary>What does the redaction tool actually do?</summary>
+          <div class="answer">
+            <p>
+              It resamples the region coarsely from the original image and paints the result
+              back over it, then flattens everything on export. The exported file genuinely
+              has no original underneath. It is not a blur layer over recoverable pixels in
+              a layered document, which is how redactions usually leak.
+            </p>
+          </div>
+        </details>
+        <details>
+          <summary>Why is there no cloud upload or sharing link?</summary>
+          <div class="answer">
+            <p>
+              Because adding one would mean adding network access, and the network access
+              would ship to everyone, including the people who never upload anything. The
+              plan is to keep the extension incapable of sending data and let it hand the
+              image to whatever service you choose through your clipboard instead.
+            </p>
+          </div>
+        </details>
+        <details>
+          <summary>Is it really free, and what is the catch?</summary>
+          <div class="answer">
+            <p>
+              It is free and the source is public under GPL-3.0. The catch, such as it is,
+              is that it does less than the extensions that fund themselves by knowing
+              things about you. It has no history server, no account and no sharing links,
+              because each of those needs a network connection this deliberately does not
+              have.
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>OpenFullPage. Free software under GPL-3.0.</span>
+    <span class="spacer"></span>
+    <a href="https://github.com/PalWorks" rel="noopener">Source</a>
+    <a href="#permissions">Permissions</a>
+    <a href="#verify">Verify</a>
+  </div>
+</footer>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://palworks.github.io/openfullpage-site/enforced.html#website",
+      "url": "https://palworks.github.io/openfullpage-site/",
+      "name": "OpenFullPage",
+      "description": "A Chrome extension that captures a whole web page as one image, with no network access.",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://palworks.github.io/openfullpage-site/enforced.html#app",
+      "name": "OpenFullPage",
+      "alternateName": "OpenFullPage - Capture Screen, Annotate, Save",
+      "applicationCategory": "BrowserApplication",
+      "applicationSubCategory": "Chrome Extension",
+      "operatingSystem": "Chrome 116 or newer, on Windows, macOS, Linux and ChromeOS",
+      "browserRequirements": "Requires Google Chrome 116 or newer",
+      "softwareVersion": "1.6.1",
+      "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+      "url": "https://palworks.github.io/openfullpage-site/",
+      "image": "https://palworks.github.io/openfullpage-site/assets/og.png",
+      "screenshot": [
+        "https://palworks.github.io/openfullpage-site/assets/shot-capture.png",
+        "https://palworks.github.io/openfullpage-site/assets/shot-annotate.png",
+        "https://palworks.github.io/openfullpage-site/assets/shot-save.png"
+      ],
+      "description": "Captures a whole web page of any length as a single image, annotates it and saves it as PNG or JPEG. Makes no network requests: the extension manifest sets connect-src 'none', which stops Chrome from carrying any outbound traffic. No dependencies, no build step, and the shipped package is byte identical to the public source.",
+      "featureList": [
+        "Full page capture of pages longer than the screen",
+        "Visible area and single element capture",
+        "Sticky and fixed elements held still so they do not repeat",
+        "Annotation with arrows, boxes, ellipses, highlighter, text and numbered steps",
+        "Destructive redaction that removes the pixels rather than covering them",
+        "Crop, undo and redo",
+        "Export as PNG or JPEG, or copy to the clipboard",
+        "No network access, no analytics and no account"
+      ],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock"
+      },
+      "isAccessibleForFree": true,
+      "privacyPolicy": "https://palworks.github.io/openfullpage-site/#permissions"
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://palworks.github.io/openfullpage-site/enforced.html#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I know the extension will not change after I install it?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Chrome updates extensions silently and only re-prompts when permissions increase, so no extension can promise this outright. What this project does is keep permissions minimal enough that a change of behaviour would need a visible permission prompt, publish every release from a public repository, and make the shipped package byte identical to the source so any release can be diffed against the code that claims to produce it."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it work on very long pages?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. It walks the page a screenful at a time and stitches the results, holding sticky headers still so they do not repeat down the image. Chrome's canvas has a hard ceiling of 16,384 pixels on a side, so longer pages are scaled down to fit rather than cut off, and the editor says when that has happened."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can it capture pages behind a login?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. You are logged in, so the page you can see is the page it captures. Nothing about that page is transmitted anywhere, which is precisely the case where that matters most."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What does the redaction tool actually do?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "It resamples the region coarsely from the original image and paints the result back over it, then flattens everything on export. The exported file has no original underneath, so it is not a blur layer over recoverable pixels in a layered document."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why is there no cloud upload or sharing link?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Adding one would mean adding network access, and that access would ship to everyone, including people who never upload anything. The plan is to keep the extension incapable of sending data and hand the image to whatever service you choose through the clipboard instead."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is it really free, and what is the catch?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "It is free and the source is public under GPL-3.0. It does less than extensions funded by knowing things about you: there is no history server, no account and no sharing links, because each of those needs a network connection it deliberately does not have."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<script>
+// Theme toggle. Cycles system, light, dark, and back to system. "System" is the
+// absence of the attribute, so clearing it hands control back to the OS.
+(function () {
+  var order = ["system", "light", "dark"];
+  var root = document.documentElement;
+  var btn = document.getElementById("theme-toggle");
+  var label = document.getElementById("theme-toggle-label");
+  if (!btn) return;
+
+  function current() {
+    var t = root.getAttribute("data-theme");
+    return t === "light" || t === "dark" ? t : "system";
+  }
+
+  function apply(next) {
+    if (next === "system") {
+      root.removeAttribute("data-theme");
+      try { localStorage.removeItem("theme"); } catch (e) {}
+    } else {
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    }
+    var text = "Theme: " + next;
+    label.textContent = text;
+    btn.setAttribute("aria-label", text + ". Activate to change.");
+    btn.title = text;
+  }
+
+  apply(current());
+  btn.addEventListener("click", function () {
+    apply(order[(order.indexOf(current()) + 1) % order.length]);
+  });
+})();
+</script>
+</body>
+</html>
