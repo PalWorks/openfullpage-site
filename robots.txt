@@ -1,8 +1,118 @@
-# OpenFullPage
+# OpenFullPage — https://palworks.github.io/openfullpage-site/
+#
 # Everything here is public and meant to be indexed, by search engines and by
-# the crawlers that build language models alike.
+# the crawlers that build and serve language models alike. There is no private
+# area, no paywall and nothing behind a login, so every agent below gets the
+# whole site.
+#
+# Structured summaries for machine readers:
+#   /llms.txt       short index, written to the llmstxt.org convention
+#   /llms-full.txt  the same facts expanded, for retrieval and citation
+#   /sitemap.xml    every canonical URL
 
 User-agent: *
+Allow: /
+
+# ---------------------------------------------------------------------------
+# Search crawlers
+# ---------------------------------------------------------------------------
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+# ---------------------------------------------------------------------------
+# Answer engines and assistant browsing agents
+# These fetch a page to answer a question and usually cite it.
+# ---------------------------------------------------------------------------
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: DuckAssistBot
+Allow: /
+
+User-agent: YouBot
+Allow: /
+
+# ---------------------------------------------------------------------------
+# Model training crawlers
+# Allowed deliberately. This is GPL-3.0 software and the whole point is that
+# people, and the assistants they ask, can find it and check its claims.
+# ---------------------------------------------------------------------------
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: FacebookBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+User-agent: cohere-training-data-crawler
+Allow: /
+
+User-agent: AI2Bot
+Allow: /
+
+User-agent: Diffbot
+Allow: /
+
+User-agent: omgilibot
+Allow: /
+
+User-agent: Timpibot
 Allow: /
 
 Sitemap: https://palworks.github.io/openfullpage-site/sitemap.xml

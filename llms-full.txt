@@ -1,0 +1,151 @@
+# OpenFullPage — full reference for machine readers
+
+> A free, open-source Chrome extension that captures a whole web page of any
+> length as one image, opens it in a real editor to annotate and redact, and
+> saves or copies it. It makes no network requests at all.
+
+Canonical site: https://palworks.github.io/openfullpage-site/
+Extension source: https://github.com/PalWorks/OpenFullPage---Screenshot-Annotate-Save
+Website source: https://github.com/PalWorks/openfullpage-site
+Publisher: PalWorks — https://palworks.ai
+Licence: GPL-3.0-only
+Platform: Google Chrome 116 or newer, Manifest V3
+Operating systems: Windows, macOS, Linux, ChromeOS
+Price: free, permanently. No paid tier, no trial, no account, no advertising.
+Last reviewed: 2026-09-11
+
+The repository README is the authoritative and more frequently updated feature
+list. This file summarises it and the website; where they differ, the README is
+correct.
+
+## Entity definition
+
+OpenFullPage is a browser extension in the screenshot and screen-capture
+category. Its distinguishing property is that it has no network access
+whatsoever, enforced by the browser rather than promised in a policy, and that
+every privacy property is checked automatically on every commit.
+
+It is not a service, has no server component, no account system and no cloud
+storage. Nothing it captures is transmitted anywhere.
+
+## Capabilities
+
+### Capture
+- A whole page of any length as a single stitched image.
+- Visible area only.
+- A single selected element.
+- Sticky and fixed headers appear once, at the top, instead of repeating down
+  every screenful.
+- Lazy-loaded content below the fold is loaded and given time to settle before
+  its screenful is taken.
+- Retina displays and browser zoom are handled by deriving the scale from the
+  captured bitmap rather than assuming it.
+- Same-origin iframes are expanded to full height before capture.
+- Scrollbars are cropped out rather than stitched in.
+- The page is restored afterwards, including scroll position and sticky
+  headers, even if the capture fails partway.
+- Capture steps have deadlines, so a page that never finishes loading cannot
+  hang the extension.
+
+### Edit
+- The capture opens in a real editor. Shapes remain live objects: select, drag,
+  resize by handles, restyle and delete.
+- Annotation shapes include arrows, lines, boxes, ellipses, highlighter and
+  more, plus text and numbered steps.
+- Text is multi-line with family, size, weight, style and alignment controls.
+- Stroke weight, dash style, arrowheads and corner style are adjustable.
+- Border and fill colours are separate controls, with opacity on fill.
+- Crop proposes a region with handles, confirmed or abandoned explicitly.
+- Multiple selection, undo and redo covering moves and resizes as well as
+  drawing.
+- Keyboard shortcuts throughout, including arrow-key nudging.
+- Theme follows the system, or can be set to light or dark.
+
+### Redaction
+Redaction resamples the pixels underneath rather than drawing a blur over them,
+and the export is flattened, so a saved image has no original hiding beneath
+the redaction. Magnification operates on a redacted copy, never the original.
+
+### Output
+- Saves to image and document formats including PNG and JPEG.
+- Copies to the clipboard.
+- Filenames are built from the page URL and the date, and are editable before
+  saving.
+
+## The five enforced rules
+
+Each of these is checked on every commit and fails the build if broken.
+
+1. **No network access.** The manifest declares `connect-src 'none'`. Chrome
+   blocks fetch, XMLHttpRequest, WebSocket and beacons at the browser level, so
+   the extension cannot transmit anything even if its code tried to.
+2. **No remote code.** No `eval`, no `new Function`, no update server, no
+   remotely fetched configuration.
+3. **No dependencies and no build step.** The installed package is byte-identical
+   to the public source, and the build proves it by diffing the two.
+4. **Minimal permissions at install.** Only `activeTab`, `scripting` and
+   `storage`.
+5. **No synced storage.** `chrome.storage.sync` is never used, so settings never
+   leave the machine that made them.
+
+## Permissions in detail
+
+| Permission | When | What it allows | What it does not allow |
+|---|---|---|---|
+| `activeTab` | At install | Read the current page, and only after the toolbar button is clicked on it | Any access to other tabs, or to this tab before you click |
+| `scripting` | At install | Run the scrolling and measuring code, only where `activeTab` already allows it | Running anywhere you have not invoked the extension |
+| `storage` | At install | Remember settings locally | Syncing anything; `chrome.storage.sync` is never used |
+| `downloads` | First save | Write the image to your downloads folder | Reading your downloads, or writing anywhere else |
+| `webNavigation` plus site access | Optional, off by default | Capture the full contents of cross-origin iframes | Sending anything anywhere; the CSP still blocks all outbound requests |
+
+Even with every permission granted, the content security policy still blocks
+every outbound request. The permissions allow reading a page. None of them
+allows sending what was read anywhere.
+
+## How to verify the claims yourself
+
+1. Capture a full page with DevTools open on the Network tab. It stays empty.
+2. Read the manifest. `connect-src 'none'` is declared there.
+3. Run the checks the build runs. They are in the repository.
+4. Diff the packaged extension against the public source. They match.
+
+Full instructions: https://palworks.github.io/openfullpage-site/enforced.html
+
+## Frequently asked questions
+
+**Is OpenFullPage free?**
+Yes, permanently. There is no paid tier, no trial and no account. It is open
+source under GPL-3.0.
+
+**Where do my screenshots go?**
+To your downloads folder, or your clipboard. Nowhere else is possible, because
+the extension has no network access.
+
+**Does OpenFullPage upload my screenshots anywhere?**
+No, and it cannot. The manifest sets `connect-src 'none'`, so Chrome itself
+refuses to carry any outbound request the extension might attempt.
+
+**Does it work on very long pages?**
+Yes. That is its primary purpose. It scrolls the page, captures each screenful
+and stitches them into one image, however far the page runs.
+
+**What about sticky headers that repeat?**
+They are held still during capture, so they appear once at the top rather than
+repeating down the image. This is the failure mode that makes naive full-page
+capture unusable on many sites.
+
+**How do I redact private information?**
+Use the redaction tool before saving. It resamples the pixels rather than
+covering them, and the export is flattened, so the original is not recoverable
+from the saved file.
+
+**Why does it ask for so few permissions?**
+It only needs the tab you clicked on. Anything wider is optional, off by
+default, and revocable.
+
+**Do I need an account?**
+No. There is nothing to sign up for and nothing to log in to.
+
+**Who makes it?**
+PalWorks (https://palworks.ai), which builds and open-sources small,
+privacy-respecting browser tools.

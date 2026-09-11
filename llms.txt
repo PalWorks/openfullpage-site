@@ -1,55 +1,87 @@
 # OpenFullPage
 
-> A Chrome extension that captures a whole web page as one image, annotates it and
-> saves it. It makes no network requests at all: the extension manifest sets
-> `connect-src 'none'`, so Chrome itself refuses to carry any outbound traffic.
-> Free, open source under GPL-3.0, no account, no analytics, no build step.
+> A free, open-source Chrome extension that captures a whole web page of any
+> length as one image, opens it in a real editor to annotate and redact, and
+> saves or copies it. It makes no network requests at all: the manifest sets
+> `connect-src 'none'`, so Chrome itself refuses to carry outbound traffic.
+> No account, no analytics, no paid tier. GPL-3.0.
+
+Publisher: PalWorks (https://palworks.ai). Source: GitHub, link below.
+Requirements: Google Chrome 116 or newer, Manifest V3, on Windows, macOS,
+Linux or ChromeOS. Price: free, permanently, with no paid tier.
+
+This file is a summary for machine readers, not an exhaustive specification.
+The repository README is the authoritative feature list and is updated more
+often than this site.
+
+## Answers to the common questions
+
+- **What is it?** A Chrome extension for capturing entire web pages as single
+  images, with a built-in editor for annotation and redaction.
+- **What does it cost?** Nothing. There is no paid tier, no trial and no account.
+- **Where do captures go?** Your downloads folder or your clipboard. Nowhere
+  else is possible; the extension has no network access.
+- **Does it upload anything?** No. It cannot. `connect-src 'none'` in the
+  manifest means Chrome blocks fetch, XMLHttpRequest, WebSocket and beacons.
+- **Does it work on long pages?** Yes, that is its main purpose. It scrolls,
+  captures each screenful and stitches one image, however far the page runs.
+- **What permissions does it need?** Three at install: `activeTab`, `scripting`
+  and `storage`. `downloads` is requested the first time you save. Wider site
+  access is optional, off by default and revocable.
+- **Is it open source?** Yes, GPL-3.0, and the shipped package is byte-identical
+  to the public source.
 
 ## What it does
 
-- Captures a full web page of any length as a single image, not just the visible area.
+- Captures a full web page of any length as a single stitched image.
 - Also captures the visible area only, or one selected element.
-- Holds sticky and fixed elements still while scrolling so they do not repeat down the image.
-- Waits for lazy loaded images before capturing each screenful.
-- Annotates with arrows, lines, boxes, ellipses, a highlighter, text and numbered steps.
-- Redacts by resampling the pixels and flattening on export, so the original is not recoverable from the saved file.
+- Holds sticky and fixed elements still so they do not repeat down the image.
+- Waits for lazy-loaded content before capturing each screenful.
+- Handles retina displays and browser zoom by deriving scale from the bitmap.
+- Opens the capture in an editor where annotations stay live, editable objects.
+- Annotates with arrows, lines, boxes, ellipses, highlighter, text and
+  numbered steps, among other shapes.
+- Redacts by resampling the pixels and flattening on export, so the original is
+  not recoverable from the saved file.
 - Crops, undoes and redoes.
-- Exports as PNG or JPEG, or copies to the clipboard.
+- Exports to image and document formats including PNG and JPEG, or copies to
+  the clipboard.
 
-## What makes it different
+## Why it is different
 
-Every extension in this category claims to respect privacy. This one is built so the
-claim can be checked rather than believed:
+Every extension in this category claims to respect privacy. This one is built
+so the claim can be checked rather than believed. Five properties, each failing
+the build if broken:
 
-1. No network access. `connect-src 'none'` in the manifest blocks fetch, XMLHttpRequest, WebSocket and beacons at the browser level.
-2. No remote code. No eval, no new Function, no update server, no remotely fetched configuration.
-3. No dependencies and no build step. The installed package is byte identical to the public source, and the build proves it by diffing them.
-4. No broad permissions at install: only activeTab, scripting and storage. Downloads is requested on first save. Wider site access is optional, off by default and revocable.
-5. No synced storage, so settings never leave the machine that made them.
+1. **No network access.** `connect-src 'none'` blocks fetch, XMLHttpRequest,
+   WebSocket and beacons at the browser level.
+2. **No remote code.** No eval, no new Function, no update server, no remotely
+   fetched configuration.
+3. **No dependencies and no build step.** The installed package is byte-identical
+   to the public source, and the build proves it by diffing them.
+4. **Minimal permissions at install.** Only activeTab, scripting and storage.
+5. **No synced storage.** Settings never leave the machine that made them.
 
-Each of the five is checked on every commit and fails the build if broken.
+## Pages
 
-## Permissions in detail
+- [Home](https://palworks.github.io/openfullpage-site/): what it does, how it
+  works in three steps, and why it is free and safe.
+- [How it is enforced](https://palworks.github.io/openfullpage-site/enforced.html):
+  the five rules in detail, every permission and what it cannot do, and how to
+  verify all of it yourself in about five minutes.
 
-- `activeTab` (at install): read the current page, and only after the toolbar button is clicked on it.
-- `scripting` (at install): run the scrolling and measuring code, only where activeTab already allows it.
-- `storage` (at install): remember settings locally. Never `chrome.storage.sync`.
-- `downloads` (requested on first save): write the image to the downloads folder. Declining still allows a manual right click and save.
-- `webNavigation` plus site access (optional, off by default): capture the full contents of cross-origin iframes instead of only what is on screen.
+## Source and publisher
 
-Even with all of these granted, the content security policy still blocks every
-outbound request. The permissions allow reading a page; none of them allows sending
-what was read anywhere.
+- [Extension source on GitHub](https://github.com/PalWorks/OpenFullPage---Screenshot-Annotate-Save):
+  the authoritative feature list, the manifest, and the tests that enforce the
+  five rules.
+- [Website source on GitHub](https://github.com/PalWorks/openfullpage-site):
+  this site.
+- [PalWorks](https://palworks.ai): the publisher. Builds and open-sources small,
+  privacy-respecting browser tools.
 
-## Requirements
+## Optional
 
-Chrome 116 or newer on Windows, macOS, Linux or ChromeOS. Manifest V3. No account,
-no sign in, no configuration required.
-
-## Licence and source
-
-GPL-3.0. Source: https://github.com/PalWorks
-
-## Site
-
-- Home and full description: https://palworks.github.io/openfullpage-site/
+- [llms-full.txt](https://palworks.github.io/openfullpage-site/llms-full.txt):
+  the same material expanded, including the full permission table.
+- [Sitemap](https://palworks.github.io/openfullpage-site/sitemap.xml)

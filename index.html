@@ -177,8 +177,31 @@ section{padding:64px 0}
 .freelist{display:grid;gap:10px;margin:0;padding:0;list-style:none}
 .freelist li{background:rgba(23,18,14,.08);border-radius:12px;padding:13px 16px;font-weight:600;font-size:16px}
 
+/* in short: question-shaped, machine-extractable, human-skimmable */
+.short{margin-top:34px;margin-bottom:0;display:grid;grid-template-columns:repeat(2,1fr);gap:0 44px}
+.short .qa{border-top:1px solid var(--line);padding:16px 0}
+.short dt{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:17.5px;
+  letter-spacing:-.012em;margin:0 0 5px}
+.short dd{margin:0;color:var(--muted);font-size:16px;line-height:1.5}
+.short dd b{color:var(--text);font-weight:600}
+
+/* specifications */
+/* 6px of vertical inset keeps the first and last rows off the 22px corner
+   curve. Inner radius = outer radius minus the gap; see DESIGN.md > Shapes. */
+.spec{margin-top:30px;border:1px solid var(--line);border-radius:22px;overflow:hidden;
+  background:var(--surface);padding:6px 0}
+.spec table{width:100%;border-collapse:collapse}
+.spec th,.spec td{text-align:left;padding:15px 22px;border-bottom:1px solid var(--line);font-size:16px;vertical-align:top}
+.spec tr:last-child th,.spec tr:last-child td{border-bottom:0}
+.spec th{width:34%;font-weight:600;color:var(--muted);font-family:'Spline Sans Mono',monospace;
+  font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.spec td b{font-weight:700}
+@media(max-width:700px){.spec th,.spec td{display:block;padding:10px 18px;border-bottom:0}
+  .spec th{padding-bottom:2px}.spec tr{display:block;border-bottom:1px solid var(--line);padding:6px 0}}
+
 /* faq */
 .faq{display:grid;grid-template-columns:1fr 1fr;gap:16px 38px;margin-top:30px}
+@media(max-width:980px){.short{grid-template-columns:1fr}}
 .q{border-top:1px solid var(--line);padding-top:15px}
 .q b{display:block;font-size:17px;margin-bottom:5px}
 .q p{margin:0;color:var(--muted);font-size:15.5px;line-height:1.5}
@@ -207,7 +230,8 @@ if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)
     <a class="hide-sm" href="#everything">Everything it does</a>
     <a class="hide-sm" href="#how">How it works</a>
     <a class="hide-sm" href="#safe">Safe &amp; free</a>
-    <a href="enforced.html">How it is enforced</a>
+    <a class="hide-sm" href="enforced.html">How it is enforced</a>
+    <a href="https://github.com/PalWorks/OpenFullPage---Screenshot-Annotate-Save" rel="noopener">GitHub</a>
     <button class="theme" type="button" id="theme-toggle">
       <svg class="ico ico-system" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.4"/><path d="M12 3.6a8.4 8.4 0 0 0 0 16.8z" fill="currentColor" stroke="none"/></svg>
       <svg class="ico ico-light" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.3"/><path d="M12 2.4v2.3M12 19.3v2.3M2.4 12h2.3M19.3 12h2.3M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7"/></svg>
@@ -245,6 +269,25 @@ if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)
     </ul>
   </div>
 </div>
+
+<section id="in-short"><div class="wrap">
+  <h2 class="h2">In short</h2>
+  <p class="sub">The questions people actually ask, answered in a sentence each.</p>
+  <dl class="short">
+    <div class="qa"><dt>What is OpenFullPage?</dt>
+      <dd><b>A free Chrome extension that captures an entire web page as a single image</b>, then lets you annotate, redact, crop and save it, all on your own machine.</dd></div>
+    <div class="qa"><dt>What does it cost?</dt>
+      <dd><b>Nothing, permanently.</b> There is no paid tier, no trial, no account and no advertising. It is open source under GPL-3.0.</dd></div>
+    <div class="qa"><dt>Where do my screenshots go?</dt>
+      <dd><b>Your downloads folder, or your clipboard.</b> Nowhere else is possible, because the extension has no network access at all.</dd></div>
+    <div class="qa"><dt>Does it upload anything?</dt>
+      <dd><b>No, and it cannot.</b> The manifest sets <span class="mono">connect-src 'none'</span>, so Chrome itself refuses to carry any outbound request.</dd></div>
+    <div class="qa"><dt>Does it handle very long pages?</dt>
+      <dd><b>Yes, that is its main purpose.</b> It scrolls, captures each screenful and stitches one image, however far the page runs.</dd></div>
+    <div class="qa"><dt>What do I need to run it?</dt>
+      <dd><b>Google Chrome 116 or newer</b>, on Windows, macOS, Linux or ChromeOS. Nothing else, and no configuration.</dd></div>
+  </dl>
+</div></section>
 
 <section id="everything"><div class="wrap">
   <h2 class="h2">Everything it does</h2>
@@ -328,7 +371,13 @@ if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)
     <h2 class="h2">Genuinely free. No catch.</h2>
     <p>Not free-for-now, not free-until-you-hit-a-limit. There is no paid tier, no company
       behind it selling your attention, and no reason for either.</p>
-    <div class="acts"><a class="cta" href="https://github.com/PalWorks" rel="noopener">Add to Chrome, free</a></div>
+    <!-- PLACEHOLDER (1 of 2): swap this href for the Chrome Web Store listing URL
+         once the extension is published there. Until then it points at the repo,
+         so the button works rather than dead-ending. See CLAUDE.md > Swap points. -->
+    <div class="acts">
+      <a class="cta" id="cta-webstore" href="https://github.com/PalWorks/OpenFullPage---Screenshot-Annotate-Save#install" rel="noopener">Add to Chrome, free</a>
+      <a class="cta alt" id="cta-github" href="https://github.com/PalWorks/OpenFullPage---Screenshot-Annotate-Save" rel="noopener">View the source</a>
+    </div>
   </div>
   <ul class="freelist">
     <li>Every tool, from the first minute</li>
@@ -338,7 +387,29 @@ if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)
   </ul>
 </div></div></section>
 
-<section><div class="wrap">
+<section id="specs"><div class="wrap">
+  <h2 class="h2">Specifications</h2>
+  <p class="sub">Everything factual about the extension, in one place.</p>
+  <div class="spec"><table>
+    <tbody>
+    <tr><th scope="row">Name</th><td><b>OpenFullPage</b> &mdash; Screenshot, Annotate, Save</td></tr>
+    <tr><th scope="row">Category</th><td>Browser extension, screenshot and screen capture</td></tr>
+    <tr><th scope="row">Platform</th><td>Google Chrome 116 or newer, Manifest V3</td></tr>
+    <tr><th scope="row">Operating systems</th><td>Windows, macOS, Linux, ChromeOS</td></tr>
+    <tr><th scope="row">Price</th><td><b>Free</b>, permanently. No paid tier, no trial, no account, no advertising</td></tr>
+    <tr><th scope="row">Licence</th><td><a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="noopener">GPL-3.0-only</a></td></tr>
+    <tr><th scope="row">Permissions at install</th><td><span class="mono">activeTab</span>, <span class="mono">scripting</span>, <span class="mono">storage</span>. <span class="mono">downloads</span> is requested on first save</td></tr>
+    <tr><th scope="row">Network access</th><td><b>None.</b> <span class="mono">connect-src 'none'</span> in the manifest</td></tr>
+    <tr><th scope="row">Dependencies</th><td>None. No build step; the package is byte-identical to the source</td></tr>
+    <tr><th scope="row">Account required</th><td>No</td></tr>
+    <tr><th scope="row">Works offline</th><td>Yes, always</td></tr>
+    <tr><th scope="row">Publisher</th><td><a href="https://palworks.ai" rel="noopener">PalWorks</a></td></tr>
+    <tr><th scope="row">Source code</th><td><a href="https://github.com/PalWorks/OpenFullPage---Screenshot-Annotate-Save" rel="noopener">GitHub</a></td></tr>
+    </tbody>
+  </table></div>
+</div></section>
+
+<section id="faq"><div class="wrap">
   <h2 class="h2">Questions</h2>
   <div class="faq">
     <div class="q"><b>Is it really free?</b><p>Yes. No paid tier, no trial, no account. It is open
@@ -353,14 +424,24 @@ if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)
       wider is optional, off by default, and you can take it back.</p></div>
     <div class="q"><b>Do I need an account?</b><p>No. There is nothing to sign up for and nothing
       to log in to.</p></div>
+    <div class="q"><b>What happens to sticky headers?</b><p>They are held still during capture, so
+      they appear once at the top instead of repeating down the image. That repetition is what
+      makes naive full-page capture unusable on many sites.</p></div>
+    <div class="q"><b>Can it capture pages behind a login?</b><p>Yes. It captures whatever the tab
+      is showing, so if you are signed in, it captures the signed-in page. Nothing about that page
+      is transmitted anywhere.</p></div>
+    <div class="q"><b>Who builds it?</b><p>PalWorks, which builds and open-sources small,
+      privacy-respecting browser tools. The source is on GitHub under GPL-3.0.</p></div>
   </div>
 </div></section>
 </main>
 
 <div class="wrap"><footer>
-  <span>OpenFullPage &middot; free and open source under <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="noopener">GPL-3.0</a></span>
+  <span>Built and open-sourced by <a href="https://palworks.ai" rel="noopener">PalWorks</a>
+    &middot; <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="noopener">GPL-3.0</a></span>
   <span><a href="enforced.html">How it is enforced</a></span>
-  <span class="sp"><a href="https://github.com/PalWorks" rel="noopener">Source</a></span>
+  <span><a href="https://github.com/PalWorks/OpenFullPage---Screenshot-Annotate-Save" rel="noopener">Extension source</a></span>
+  <span class="sp"><a href="https://github.com/PalWorks/openfullpage-site" rel="noopener">Site source</a></span>
 </footer></div>
 
 <script>
@@ -389,23 +470,81 @@ if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)
   "@context": "https://schema.org",
   "@graph": [
     {
+      "@type": "Organization",
+      "@id": "https://palworks.ai/#organization",
+      "name": "PalWorks",
+      "url": "https://palworks.ai",
+      "description": "Builds and open-sources small, privacy-respecting browser tools.",
+      "sameAs": [
+        "https://github.com/PalWorks",
+        "https://palworks.ai"
+      ]
+    },
+    {
       "@type": "WebSite",
       "@id": "https://palworks.github.io/openfullpage-site/#website",
       "url": "https://palworks.github.io/openfullpage-site/",
       "name": "OpenFullPage",
-      "description": "A Chrome extension with twenty screenshot tools. Free, open source, and nothing it captures leaves your computer.",
-      "inLanguage": "en"
+      "description": "A free Chrome extension that captures a whole web page as one image, with no network access.",
+      "inLanguage": "en",
+      "publisher": {
+        "@id": "https://palworks.ai/#organization"
+      }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://palworks.github.io/openfullpage-site/#webpage",
+      "url": "https://palworks.github.io/openfullpage-site/",
+      "name": "OpenFullPage: twenty screenshot tools for Chrome, free forever",
+      "description": "Capture a whole web page as one image, mark it up, blur out anything private, then save or copy it. Free, open source, and nothing leaves your computer.",
+      "isPartOf": {
+        "@id": "https://palworks.github.io/openfullpage-site/#website"
+      },
+      "about": {
+        "@id": "https://palworks.github.io/openfullpage-site/#app"
+      },
+      "mainEntity": {
+        "@id": "https://palworks.github.io/openfullpage-site/#app"
+      },
+      "breadcrumb": {
+        "@id": "https://palworks.github.io/openfullpage-site/#breadcrumb"
+      },
+      "inLanguage": "en",
+      "datePublished": "2025-11-16",
+      "dateModified": "2026-09-11",
+      "publisher": {
+        "@id": "https://palworks.ai/#organization"
+      },
+      "primaryImageOfPage": {
+        "@type": "ImageObject",
+        "url": "https://palworks.github.io/openfullpage-site/assets/og.png",
+        "width": 1200,
+        "height": 630
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://palworks.github.io/openfullpage-site/#breadcrumb",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://palworks.github.io/openfullpage-site/"
+        }
+      ]
     },
     {
       "@type": "SoftwareApplication",
       "@id": "https://palworks.github.io/openfullpage-site/#app",
       "name": "OpenFullPage",
-      "alternateName": "OpenFullPage - Capture Screen, Annotate, Save",
+      "alternateName": "OpenFullPage - Screenshot, Annotate, Save",
       "applicationCategory": "BrowserApplication",
       "applicationSubCategory": "Chrome Extension",
-      "operatingSystem": "Chrome 116 or newer, on Windows, macOS, Linux and ChromeOS",
-      "browserRequirements": "Requires Google Chrome 116 or newer",
+      "operatingSystem": "Windows, macOS, Linux, ChromeOS",
+      "browserRequirements": "Requires Google Chrome 116 or newer, Manifest V3",
       "softwareVersion": "1.6.1",
+      "softwareRequirements": "Google Chrome 116 or newer",
       "license": "https://www.gnu.org/licenses/gpl-3.0.html",
       "url": "https://palworks.github.io/openfullpage-site/",
       "image": "https://palworks.github.io/openfullpage-site/assets/og.png",
@@ -414,37 +553,201 @@ if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)
         "https://palworks.github.io/openfullpage-site/assets/shot-annotate.png",
         "https://palworks.github.io/openfullpage-site/assets/shot-save.png"
       ],
-      "description": "Twenty tools for capturing the web: full page capture of any length, visible area and single element modes, annotation with arrows, boxes, ellipses, highlighter, text and numbered steps, blur that destroys the pixels, crop, undo and redo, and export as PNG or JPEG or straight to the clipboard. Free and open source, with no account and no network access.",
+      "description": "A free, open-source Chrome extension that captures an entire web page of any length as one image, opens it in an editor for annotation and redaction, and saves it or copies it to the clipboard. It makes no network requests: the manifest sets connect-src 'none', so Chrome itself blocks all outbound traffic.",
       "featureList": [
-        "Full page capture of pages longer than the screen",
+        "Full page capture of any length as a single image",
         "Visible area capture",
         "Single element capture",
         "Sticky and fixed elements held still so they do not repeat",
-        "Waits for lazy loaded images",
+        "Waits for lazy-loaded images before capturing",
         "Cross-origin iframe capture (optional)",
-        "Arrows",
-        "Lines",
-        "Boxes",
-        "Ellipses",
+        "Arrow annotation",
+        "Line annotation",
+        "Box annotation",
+        "Ellipse annotation",
         "Highlighter",
-        "Text",
+        "Text annotation",
         "Numbered steps",
         "Crop",
         "Undo",
         "Redo",
-        "Blur that resamples the pixels and flattens on export",
-        "Export as PNG",
-        "Export as JPEG",
-        "Copy to the clipboard"
+        "Redaction that resamples the pixels and flattens on export",
+        "Save as PNG",
+        "Save as JPEG",
+        "Copy to clipboard"
       ],
+      "permissions": "activeTab, scripting, storage; downloads requested on first save",
+      "isAccessibleForFree": true,
       "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD",
         "availability": "https://schema.org/InStock",
-        "description": "Free forever, no paid tier"
+        "description": "Free forever. No paid tier, no trial, no account."
       },
-      "isAccessibleForFree": true
+      "author": {
+        "@id": "https://palworks.ai/#organization"
+      },
+      "publisher": {
+        "@id": "https://palworks.ai/#organization"
+      },
+      "codeRepository": "https://github.com/PalWorks/OpenFullPage---Screenshot-Annotate-Save",
+      "softwareHelp": {
+        "@type": "CreativeWork",
+        "url": "https://palworks.github.io/openfullpage-site/enforced.html",
+        "name": "How OpenFullPage is enforced"
+      },
+      "sameAs": [
+        "https://github.com/PalWorks/OpenFullPage---Screenshot-Annotate-Save"
+      ],
+      "keywords": "full page screenshot, chrome extension, screen capture, annotate screenshot, redact screenshot, privacy, no network access, open source, free"
+    },
+    {
+      "@type": "ItemList",
+      "@id": "https://palworks.github.io/openfullpage-site/#capabilities",
+      "name": "What OpenFullPage does",
+      "numberOfItems": 20,
+      "itemListOrder": "https://schema.org/ItemListOrderAscending",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Full page capture of any length as a single image"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Visible area capture"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Single element capture"
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "name": "Sticky and fixed elements held still so they do not repeat"
+        },
+        {
+          "@type": "ListItem",
+          "position": 5,
+          "name": "Waits for lazy-loaded images before capturing"
+        },
+        {
+          "@type": "ListItem",
+          "position": 6,
+          "name": "Cross-origin iframe capture (optional)"
+        },
+        {
+          "@type": "ListItem",
+          "position": 7,
+          "name": "Arrow annotation"
+        },
+        {
+          "@type": "ListItem",
+          "position": 8,
+          "name": "Line annotation"
+        },
+        {
+          "@type": "ListItem",
+          "position": 9,
+          "name": "Box annotation"
+        },
+        {
+          "@type": "ListItem",
+          "position": 10,
+          "name": "Ellipse annotation"
+        },
+        {
+          "@type": "ListItem",
+          "position": 11,
+          "name": "Highlighter"
+        },
+        {
+          "@type": "ListItem",
+          "position": 12,
+          "name": "Text annotation"
+        },
+        {
+          "@type": "ListItem",
+          "position": 13,
+          "name": "Numbered steps"
+        },
+        {
+          "@type": "ListItem",
+          "position": 14,
+          "name": "Crop"
+        },
+        {
+          "@type": "ListItem",
+          "position": 15,
+          "name": "Undo"
+        },
+        {
+          "@type": "ListItem",
+          "position": 16,
+          "name": "Redo"
+        },
+        {
+          "@type": "ListItem",
+          "position": 17,
+          "name": "Redaction that resamples the pixels and flattens on export"
+        },
+        {
+          "@type": "ListItem",
+          "position": 18,
+          "name": "Save as PNG"
+        },
+        {
+          "@type": "ListItem",
+          "position": 19,
+          "name": "Save as JPEG"
+        },
+        {
+          "@type": "ListItem",
+          "position": 20,
+          "name": "Copy to clipboard"
+        }
+      ]
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://palworks.github.io/openfullpage-site/#howto",
+      "name": "How to capture a full web page with OpenFullPage",
+      "description": "Capture an entire web page as one image, annotate it, and save or copy it.",
+      "totalTime": "PT1M",
+      "tool": {
+        "@type": "HowToTool",
+        "name": "OpenFullPage Chrome extension"
+      },
+      "supply": [],
+      "step": [
+        {
+          "@type": "HowToStep",
+          "position": 1,
+          "name": "Capture",
+          "url": "https://palworks.github.io/openfullpage-site/#how",
+          "text": "Click the OpenFullPage toolbar button. It takes the whole page, however long it runs. Sticky headers stay put, lazy images are waited for, and the result is a single image.",
+          "image": "https://palworks.github.io/openfullpage-site/assets/shot-capture.png"
+        },
+        {
+          "@type": "HowToStep",
+          "position": 2,
+          "name": "Mark it up",
+          "url": "https://palworks.github.io/openfullpage-site/#how",
+          "text": "Use arrows, boxes, ellipses, highlighter, text and numbered steps in the editor the capture opens in. Undo and redo as much as you like.",
+          "image": "https://palworks.github.io/openfullpage-site/assets/shot-annotate.png"
+        },
+        {
+          "@type": "HowToStep",
+          "position": 3,
+          "name": "Save or copy",
+          "url": "https://palworks.github.io/openfullpage-site/#how",
+          "text": "Name the file, pick a format, and it lands in your downloads folder. Or copy it straight to the clipboard.",
+          "image": "https://palworks.github.io/openfullpage-site/assets/shot-save.png"
+        }
+      ]
     },
     {
       "@type": "FAQPage",
@@ -452,10 +755,18 @@ if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "Is it really free?",
+          "name": "What is OpenFullPage?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. No paid tier, no trial, no account. It is open source under GPL-3.0 and always will be."
+            "text": "A free Chrome extension that captures an entire web page as a single image, then lets you annotate, redact, crop and save it, all on your own machine."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What does it cost?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Nothing, permanently. There is no paid tier, no trial, no account and no advertising. It is open source under GPL-3.0."
           }
         },
         {
@@ -463,7 +774,39 @@ if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)
           "name": "Where do my screenshots go?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Your downloads folder, or your clipboard. Nowhere else is possible: the extension has no way to send them."
+            "text": "Your downloads folder, or your clipboard. Nowhere else is possible, because the extension has no network access at all."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it upload anything?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No, and it cannot. The manifest sets connect-src 'none', so Chrome itself refuses to carry any outbound request."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it handle very long pages?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, that is its main purpose. It scrolls, captures each screenful and stitches one image, however far the page runs."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What do I need to run it?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Google Chrome 116 or newer, on Windows, macOS, Linux or ChromeOS. Nothing else, and no configuration."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is it really free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. No paid tier, no trial, no account. It is open source under GPL-3.0 and always will be."
           }
         },
         {
@@ -496,6 +839,30 @@ if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)
           "acceptedAnswer": {
             "@type": "Answer",
             "text": "No. There is nothing to sign up for and nothing to log in to."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What happens to sticky headers?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "They are held still during capture, so they appear once at the top instead of repeating down the image. That repetition is what makes naive full-page capture unusable on many sites."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can it capture pages behind a login?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. It captures whatever the tab is showing, so if you are signed in, it captures the signed-in page. Nothing about that page is transmitted anywhere."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Who builds it?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "PalWorks, which builds and open-sources small, privacy-respecting browser tools. The source is on GitHub under GPL-3.0."
           }
         }
       ]
